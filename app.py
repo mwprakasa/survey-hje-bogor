@@ -1,4 +1,5 @@
 import hmac
+from collections import Counter
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -56,6 +57,21 @@ def muat_brand():
     return [b.strip() for b in header[JUMLAH_KOLOM_DEPAN:] if b.strip()]
 
 
+@st.cache_data(ttl=60)
+def muat_rekap():
+    baris = buka_spreadsheet().worksheet(TAB_HASIL).get("B2:E")
+    total = 0
+    per_rayon, per_zona = Counter(), Counter()
+    for r in baris:
+        if r and str(r[0]).strip():
+            total += 1
+            if len(r) > 2:
+                per_rayon[r[2]] += 1
+            if len(r) > 3:
+                per_zona[r[3]] += 1
+    return total, per_rayon, per_zona
+
+
 try:
     master = muat_master()
     brands = muat_brand()
@@ -92,28 +108,63 @@ def simpan():
 
 # ---------- Tampilan ----------
 st.title("Survey HJE Retail Area Bogor")
+tab_isi, tab_rekap = st.tabs(["Isian Survey", "Rekap"])
 
-pesan = st.session_state.pop("pesan", None)
-if pesan:
-    (st.success if pesan[0] == "success" else st.error)(pesan[1])
+with tab_isi:
+    pesan = st.session_state.pop("pesan", None)
+    if pesan:
+        (st.success if pesan[0] == "success" else st.error)(pesan[1])
 
-st.header("Customer")
-kode = st.text_input("Kode Cust", key="kode").strip()
+    st.header("Customer")
+    kode = st.text_input("Kode Cust", key="kode").strip()
 
-info = master.get(kode) if kode else None
-if kode and not info:
-    st.error("Kode Cust tidak ditemukan di masterdata.")
+    info = master.get(kode) if kode else None
+    if kode and not info:
+        st.error("Kode Cust tidak ditemukan di masterdata.")
 
-if info:
-    st.text_input("Nama Outlet", value=info[0], disabled=True, key=f"nama_{kode}")
-    st.text_input("Rayon", value=info[1], disabled=True, key=f"rayon_{kode}")
-    st.text_input("Zona", value=info[2], disabled=True, key=f"zona_{kode}")
+    if info:
+        st.text_input("Nama Outlet", value=info[0], disabled=True, key=f"nama_{kode}")
+        st.text_input("Rayon", value=info[1], disabled=True, key=f"rayon_{kode}")
+        st.text_input("Zona", value=info[2], disabled=True, key=f"zona_{kode}")
 
-    st.header("Harga Jual Eceran")
-    st.caption("Isi angka saja. Yang tidak diisi otomatis tersimpan 0.")
-    with st.form("form_harga"):
-        for i, brand in enumerate(brands):
-            st.number_input(
-                f"{brand} (Rp)", min_value=0, step=500, format="%d", key=f"b_{i}"
-            )
-        st.form_submit_button("Simpan Survey", on_click=simpan, type="primary")
+        st.header("Harga Jual Eceran")
+        st.caption("Isi angka saja. Yang tidak diisi otomatis tersimpan 0.")
+        with st.form("form_harga"):
+            for i, brand in enumerate(brands):
+                st.number_input(
+                    f"{brand} (Rp)", min_value=0, step=500, format="%d", key=f"b_{i}"
+                )
+            st.form_submit_button("Simpan Survey", on_click=simpan, type="primary")
+
+with tab_rekap:
+    if st.button("Muat ulang rekap"):
+        muat_rekap.clear()
+    try:
+        total, per_rayon, per_zona = muat_rekap()
+    except Exception as e:
+        st.error(f"Gagal membaca rekap: {e}")
+    else:
+        semua_rayon = sorted({v[1] for v in master.values()})
+        semua_zona = sorted({v[2] for v in master.values()})
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Total Survey", total)
+        c2.metric("Total Rayon", f"{sum(1 for x in semua_rayon if per_rayon.get(x))} / {len(semua_rayon)}")
+        c3.metric("Total Zona", f"{sum(1 for x in semua_zona if per_zona.get(x))} / {len(semua_zona)}")
+        st.caption("Total Rayon dan Total Zona = jumlah yang sudah ada survey, dari seluruh yang ada di masterdata.")
+
+        st.subheader("Survey per Rayon")
+        st.dataframe(
+            sorted(
+                [{"Rayon": x, "Total Survey": per_rayon.get(x, 0)} for x in semua_rayon],
+                key=lambda d: -d["Total Survey"],
+            ),
+            hide_index=True,
+        )
+        st.subheader("Survey per Zona")
+        st.dataframe(
+            sorted(
+                [{"Zona": x, "Total Survey": per_zona.get(x, 0)} for x in semua_zona],
+                key=lambda d: -d["Total Survey"],
+            ),
+            hide_index=True,
+        )
