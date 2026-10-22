@@ -128,7 +128,7 @@ with tab_isi:
         st.text_input("Zona", value=info[2], disabled=True, key=f"zona_{kode}")
 
         st.header("Harga Jual Eceran")
-        st.caption("Isi angka saja. Yang tidak diisi otomatis tersimpan 0.")
+        st.caption("Isi angka saja. Jika tidak jual, biarkan 0")
         with st.form("form_harga"):
             for i, brand in enumerate(brands):
                 st.number_input(
