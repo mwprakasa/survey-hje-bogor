@@ -108,7 +108,7 @@ def simpan():
 
 # ---------- Tampilan ----------
 st.title("Survey HJE Retail Area Bogor")
-tab_isi, tab_rekap = st.tabs(["Isian Survey", "Rekap"])
+tab_isi, tab_rekap = st.tabs(["📝 Survey", "📊 Tabulasi"])
 
 with tab_isi:
     pesan = st.session_state.pop("pesan", None)
