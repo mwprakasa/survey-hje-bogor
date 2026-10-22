@@ -103,7 +103,7 @@ def simpan():
     st.session_state["pesan"] = ("success", f"Tersimpan: {info[0]} ({kode})")
     st.session_state["kode"] = ""
     for i in range(len(brands)):
-        st.session_state[f"b_{i}"] = 0
+        st.session_state[f"b_{i}"] = None
 
 
 # ---------- Tampilan ----------
@@ -128,12 +128,11 @@ with tab_isi:
         st.text_input("Zona", value=info[2], disabled=True, key=f"zona_{kode}")
 
         st.header("Harga Jual Eceran")
-        st.caption("Isi angka saja. Jika tidak jual, biarkan 0")
+        st.caption("Isi angka saja. Jika tidak jual, kosongkan saja.")
         with st.form("form_harga"):
             for i, brand in enumerate(brands):
                 st.number_input(
-                    f"{brand} (Rp)", min_value=0, step=500, format="%d", key=f"b_{i}"
-                )
+                    f"{brand} (Rp)", min_value=0, step=500, format="%d", key=f"b_{i}", value=None, placeholder="0"
             st.form_submit_button("Simpan Survey", on_click=simpan, type="primary")
 
 with tab_rekap:
