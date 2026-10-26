@@ -91,7 +91,10 @@ def simpan():
     if not info:
         st.session_state["pesan"] = ("error", "Kode Cust tidak ditemukan di masterdata.")
         return
-    harga = [int(st.session_state.get(f"b_{i}") or 0) for i in range(len(brands))]
+        harga = []
+    for i in range(len(brands)):
+        v = st.session_state.get(f"b_{i}")
+        harga.append(int(v) if v is not None else "")
     waktu = datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d %H:%M:%S")
     nilai_kode = int(kode) if kode.isdigit() else kode
     baris = [waktu, nilai_kode, info[0], info[1], info[2]] + harga
